@@ -1,25 +1,74 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Coursera Week 2"
+author: "Julia Wasielewski"
+date: "August 29, 2017"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path='Figs/')
+```
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
+## Data
+This data measures activity at 5 minute intervals.  It was collected from a personal activity device between October and November of 2012.  First, we need to read in the data.
 
 
 
-## Imputing missing values
+```{r activity}
+activity <- read.csv("activity.csv", header = TRUE)
+activity$date <- as.Date(activity$date)
 
+```
 
+## Results
 
-## Are there differences in activity patterns between weekdays and weekends?
+###What is the total number of steps taken each day?
+
+Let's calculate the total number of steps, removing the values that are NA
+
+```{r total}
+totalsteps <- aggregate(activity$steps, by=list(Category=activity$date), FUN=sum, na.rm = TRUE)
+
+hist(totalsteps$x)
+mean(totalsteps$x)
+median(totalsteps$x)
+```
+
+You can see from the histogram that the data is not normally distributed.  Also, the mean and median are not equal and they would be if the data were normally distributed.
+
+###What is the average daily activity pattern?
+We will now create a time series graph of the data.
+```{r average}
+activity_no_na <- activity[complete.cases(activity),]
+plot(activity_no_na$date, activity_no_na$steps, type = "n")
+lines(activity_no_na$date, activity_no_na$steps, type = "l")
+activity[which.max(activity$steps),] 
+```
+As you can see, the NAs make the data not very pleasing.  Also, above we have shown which 5 minute interval contained the maximum number of steps.
+
+###Imputing missing values
+
+We need to find the total number of rows with missing values and replace them with the mean value for that day.  Then, we will re-plot a histogram of the total steps taken each day and re-calculate the mean and median.
+```{r missing}
+sum(is.na(activity$steps),is.na(activity$date),is.na(activity$interval))
+library(dplyr)
+
+newactivity <- transform(activity, 
+          steps = ifelse(is.na(steps), 
+                          ave(steps, date, FUN = function(x) mean(x, na.rm = TRUE)), 
+                          steps))
+totalstepsnew <- aggregate(newactivity$steps, by=list(Category=newactivity$date), FUN=sum, na.rm = TRUE)
+hist(totalstepsnew$x)
+mean(totalstepsnew$x)
+median(totalstepsnew$x)
+```
+The mean and median above are unchanged.
+
+###Difference between weekdays and weekends
+Next, we plot the difference between weekdays and weekends.
+```{r weekdays}
+library(ggplot2)
+newactivity$Weektype <- ifelse(weekdays(activity$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+
+ggplot(newactivity, aes(date,steps)) + geom_line() + facet_grid(Weektype ~.)
+```
