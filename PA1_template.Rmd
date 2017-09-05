@@ -39,12 +39,18 @@ You can see from the histogram that the data is not normally distributed.  Also,
 ###What is the average daily activity pattern?
 We will now create a time series graph of the data.
 ```{r average}
-activity_no_na <- activity[complete.cases(activity),]
-plot(activity_no_na$date, activity_no_na$steps, type = "n")
-lines(activity_no_na$date, activity_no_na$steps, type = "l")
-activity[which.max(activity$steps),] 
+activity_no_na <- aggregate(steps ~ interval, data = activity, FUN =mean)
+library(ggplot2)
+TimeSeries1 <- ggplot(data = activity_no_na, aes(x = interval, y = steps)) + 
+    geom_line() +
+    xlab("Time Intervals") + 
+    ylab("Total Number of Steps") +
+    ggtitle("Average Number of Steps Taken of the 5-Minute Interval")
+print(TimeSeries1)
+
+activity_no_na[which(activity_no_na$steps == max(activity_no_na$steps)),]
 ```
-As you can see, the NAs make the data not very pleasing.  Also, above we have shown which 5 minute interval contained the maximum number of steps.
+Above we have shown which 5 minute interval contained the maximum number of steps.
 
 ###Imputing missing values
 
@@ -69,6 +75,10 @@ Next, we plot the difference between weekdays and weekends.
 ```{r weekdays}
 library(ggplot2)
 newactivity$Weektype <- ifelse(weekdays(activity$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
-
-ggplot(newactivity, aes(date,steps)) + geom_line() + facet_grid(Weektype ~.)
+grp_cols <- names(newactivity)[c(3,4)]
+dots <- lapply(grp_cols, as.symbol)
+newactivity <- (newactivity %>% group_by_(.dots = dots) %>% summarise(Mean = mean(steps, na.rm=TRUE)))
+ggplot(newactivity, mapping = aes(x = interval, y = Mean)) + geom_line() +
+  facet_grid(Weektype ~.) + xlab("Interval") + ylab("Mean of Steps") +
+  ggtitle("Comparison of Average Number of Steps in Each Interval")
 ```
